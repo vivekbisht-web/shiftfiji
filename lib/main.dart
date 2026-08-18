@@ -1,51 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:shiftfiji/screens/web_view.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ShiftFiji());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class ShiftFiji extends StatelessWidget {
+  const ShiftFiji({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'ShiftFiji',
       debugShowCheckedModeBanner: false,
-      title: 'Shiftfiji',
-      theme: ThemeData(
-
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Shiftfiji'),
+      home: const WebViewScreen(),
     );
   }
+
 }
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Shiftfiji'),
-      ),
-
-      body: SingleChildScrollView(
-        child: Center(
-          child: Text('Shiftfiji Coming Soon Baby!'),
-        ),
-      )
-    );
-  }
-}
-
