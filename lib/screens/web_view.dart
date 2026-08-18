@@ -11,7 +11,7 @@ class WebViewScreen extends StatefulWidget {
 class _WebViewScreenState extends State<WebViewScreen> {
   late final WebViewController controller;
 
-  double progress = 0;
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -21,23 +21,35 @@ class _WebViewScreenState extends State<WebViewScreen> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onProgress: (value) {
+          onPageStarted: (url) {
+            debugPrint('Started: $url');
+
             if (mounted) {
               setState(() {
-                progress = value / 100;
+                isLoading = true;
               });
             }
           },
-          onPageStarted: (url) {
-            debugPrint('Started: $url');
-          },
+
           onPageFinished: (url) {
             debugPrint('Finished: $url');
+
+            if (mounted) {
+              setState(() {
+                isLoading = false;
+              });
+            }
           },
+
           onWebResourceError: (error) {
-            debugPrint(
-              'WebView Error: ${error.description}',
-            );
+            debugPrint('''
+================ WEBVIEW ERROR ================
+Error Code: ${error.errorCode}
+Description: ${error.description}
+URL: ${error.url}
+Error Type: ${error.errorType}
+===============================================
+''');
           },
         ),
       )
@@ -72,13 +84,18 @@ class _WebViewScreenState extends State<WebViewScreen> {
         body: SafeArea(
           child: Stack(
             children: [
+              // Website
               WebViewWidget(
                 controller: controller,
               ),
 
-              if (progress < 1.0)
-                LinearProgressIndicator(
-                  value: progress,
+              // Loading overlay
+              if (isLoading)
+                Container(
+                  color: Colors.white,
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
                 ),
             ],
           ),

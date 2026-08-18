@@ -11,7 +11,7 @@ class ShiftFiji extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ShiftFiji',
+      title: 'Shift Fiji',
       debugShowCheckedModeBanner: false,
       home: const WebViewScreen(),
     );
