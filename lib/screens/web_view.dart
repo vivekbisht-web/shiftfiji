@@ -12,6 +12,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   late final WebViewController controller;
 
   bool isLoading = true;
+  bool hasError = false;
 
   @override
   void initState() {
@@ -27,6 +28,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
             if (mounted) {
               setState(() {
                 isLoading = true;
+                hasError = false;
               });
             }
           },
@@ -50,6 +52,14 @@ URL: ${error.url}
 Error Type: ${error.errorType}
 ===============================================
 ''');
+            if (error.isForMainFrame ?? true) {
+              if (mounted) {
+                setState(() {
+                  hasError = true;
+                  isLoading = false;
+                });
+              }
+            }
           },
         ),
       )
@@ -65,6 +75,14 @@ Error Type: ${error.errorType}
     }
 
     return true;
+  }
+
+  void retryLoad() {
+    setState(() {
+      hasError = false;
+      isLoading = true;
+    });
+    controller.reload();
   }
 
   @override
@@ -85,12 +103,58 @@ Error Type: ${error.errorType}
           child: Stack(
             children: [
               // Website
-              WebViewWidget(
-                controller: controller,
-              ),
+              if (!hasError)
+                WebViewWidget(
+                  controller: controller,
+                ),
+
+              // Network error overlay
+              if (hasError)
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(24.0),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.wifi_off_rounded,
+                          size: 64,
+                          color: Colors.redAccent,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Connection Error',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Unable to load Shift Fiji. Please check your internet connection and try again.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: retryLoad,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Try Again'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               // Loading overlay
-              if (isLoading)
+              if (isLoading && !hasError)
                 Container(
                   color: Colors.white,
                   child: const Center(
