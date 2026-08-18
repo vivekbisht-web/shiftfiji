@@ -1,4 +1,4 @@
-package com.example.shiftfiji
+package com.application.shiftfiji
 
 import io.flutter.embedding.android.FlutterActivity
 
