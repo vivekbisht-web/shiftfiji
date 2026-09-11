@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:shiftfiji/constants/app_colors.dart';
 import 'package:shiftfiji/screens/main_shell_screen.dart';
 import 'package:shiftfiji/services/storage_service.dart';
-import 'package:shiftfiji/services/tracking_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,11 +20,6 @@ void main() async {
   );
 
   runApp(const ShiftFijiApp());
-
-  // Request AppTrackingTransparency on startup (iOS)
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    await TrackingService.initTracking();
-  });
 }
 
 class ShiftFijiApp extends StatelessWidget {

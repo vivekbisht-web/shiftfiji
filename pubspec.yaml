@@ -3,7 +3,7 @@ description: "shiftfiji"
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ^3.11.5
@@ -14,7 +14,6 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   webview_flutter: ^4.14.1
-  app_tracking_transparency: ^2.0.6
   shared_preferences: ^2.3.2
   url_launcher: ^6.3.0
   share_plus: ^10.0.0

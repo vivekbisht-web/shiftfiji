@@ -3,7 +3,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shiftfiji/constants/app_colors.dart';
-import 'package:shiftfiji/services/tracking_service.dart';
+import 'package:shiftfiji/services/privacy_service.dart';
 
 class SmartWebViewScreen extends StatefulWidget {
   final String initialUrl;
@@ -61,9 +61,9 @@ class _SmartWebViewScreenState extends State<SmartWebViewScreen> {
           },
           onPageFinished: (url) async {
             debugPrint('[WebView] Finished: $url');
-            // Inject ATT compliance and cookie banner suppression script
+            // Inject cookie banner suppression and privacy script
             await _controller.runJavaScript(
-              TrackingService.getWebViewOptimizationScript(),
+              PrivacyService.getWebViewOptimizationScript(),
             );
 
             final canBack = await _controller.canGoBack();

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shiftfiji/constants/app_colors.dart';
 import 'package:shiftfiji/screens/web_view.dart';
-import 'package:shiftfiji/services/tracking_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsTab extends StatefulWidget {
@@ -12,8 +11,6 @@ class SettingsTab extends StatefulWidget {
 }
 
 class _SettingsTabState extends State<SettingsTab> {
-  String _trackingStatus = TrackingService.getStatusDescription();
-
   void _openUrl(String url, String title) {
     Navigator.push(
       context,
@@ -30,21 +27,6 @@ class _SettingsTabState extends State<SettingsTab> {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
-    }
-  }
-
-  Future<void> _refreshATT() async {
-    await TrackingService.initTracking();
-    if (mounted) {
-      setState(() {
-        _trackingStatus = TrackingService.getStatusDescription();
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Privacy Status: $_trackingStatus'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -246,7 +228,7 @@ class _SettingsTabState extends State<SettingsTab> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
-                  Icons.security_rounded,
+                  Icons.shield_outlined,
                   color: AppColors.primary,
                   size: 22,
                 ),
@@ -257,7 +239,7 @@ class _SettingsTabState extends State<SettingsTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Data Privacy & App Tracking',
+                      'Privacy & Data Protection',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
@@ -265,7 +247,7 @@ class _SettingsTabState extends State<SettingsTab> {
                       ),
                     ),
                     Text(
-                      'Apple AppTrackingTransparency (ATT)',
+                      'Zero Third-Party User Tracking',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -278,7 +260,7 @@ class _SettingsTabState extends State<SettingsTab> {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Shift Fiji is committed to your privacy. In compliance with Apple guidelines, tracking identifiers and cookies are never used for cross-site advertising without explicit permission.',
+            'Shift Fiji values your privacy. We do not track users across other apps or websites, nor do we share or sell your personal data to data brokers or advertising networks.',
             style: TextStyle(
               fontSize: 12.5,
               color: AppColors.textSecondary,
@@ -297,33 +279,33 @@ class _SettingsTabState extends State<SettingsTab> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Tracking Status:',
+                  'Privacy Status:',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                InkWell(
-                  onTap: _refreshATT,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: TrackingService.isTrackingAuthorized
-                          ? AppColors.success.withOpacity(0.15)
-                          : AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _trackingStatus,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: TrackingService.isTrackingAuthorized
-                            ? AppColors.success
-                            : AppColors.primary,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 14, color: AppColors.success),
+                      SizedBox(width: 5),
+                      Text(
+                        'Private & Secure',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.success,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
