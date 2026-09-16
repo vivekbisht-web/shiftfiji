@@ -1,30 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:shiftfiji/constants/app_colors.dart';
-import 'package:shiftfiji/screens/web_view.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:shiftfiji/models/property.dart';
+import 'package:shiftfiji/screens/buyers_guide_screen.dart';
+import 'package:shiftfiji/screens/property_compare_screen.dart';
+import 'package:shiftfiji/screens/property_detail_screen.dart';
+import 'package:shiftfiji/screens/search_tab.dart';
+import 'package:shiftfiji/services/property_service.dart';
+import 'package:shiftfiji/services/storage_service.dart';
 
-class ExploreTab extends StatelessWidget {
+class ExploreTab extends StatefulWidget {
   final Function(int tabIndex)? onNavigateTab;
 
   const ExploreTab({super.key, this.onNavigateTab});
 
-  void _openPortal(BuildContext context, String url, String title) {
+  @override
+  State<ExploreTab> createState() => _ExploreTabState();
+}
+
+class _ExploreTabState extends State<ExploreTab> {
+  late List<Property> _featuredList;
+  late List<Property> _allProperties;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() {
+    setState(() {
+      _featuredList = PropertyService.getFeatured();
+      _allProperties = PropertyService.getAll();
+    });
+  }
+
+  void _navigateToSearchWithFilter({String? transactionType, String? city, String? propertyType, String? tenure}) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SmartWebViewScreen(
-          initialUrl: url,
-          title: title,
+        builder: (context) => SearchTab(
+          initialTransactionType: transactionType,
+          initialCity: city,
+          initialPropertyType: propertyType,
+          initialTenure: tenure,
         ),
       ),
     );
-  }
-
-  Future<void> _launchContact(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
   }
 
   @override
@@ -70,73 +91,138 @@ class ExploreTab extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.favorite_rounded, color: AppColors.goldLight),
-            tooltip: 'Saved Properties',
-            onPressed: () => onNavigateTab?.call(3),
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            icon: const Icon(Icons.compare_arrows_rounded, color: AppColors.gold),
+            tooltip: 'Compare Properties',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PropertyCompareScreen()),
+              );
+            },
           ),
           IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            icon: const Icon(Icons.favorite_rounded, color: AppColors.goldLight),
+            tooltip: 'Saved Properties',
+            onPressed: () => widget.onNavigateTab?.call(3),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             icon: const Icon(Icons.calculate_rounded, color: Colors.white),
             tooltip: 'Calculators',
-            onPressed: () => onNavigateTab?.call(2),
+            onPressed: () => widget.onNavigateTab?.call(2),
           ),
+          const SizedBox(width: 4),
         ],
       ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero Banner
-            _buildHeroBanner(context),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _loadData();
+        },
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Hero Search Banner
+              _buildHeroBanner(context),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Quick Category Selector
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    title: 'Explore Fiji Real Estate',
-                    subtitle: 'Find your dream home, luxury villa or freehold land',
-                  ),
-                  const SizedBox(height: 14),
-                  _buildCategoryGrid(context),
-                ],
+              // Quick Categories Grid
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(
+                      title: 'Explore Fiji Real Estate',
+                      subtitle: 'Find your dream home, luxury villa or freehold land',
+                    ),
+                    const SizedBox(height: 14),
+                    _buildCategoryGrid(context),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // Quick Financial & Investment Tools Banner
-            _buildQuickToolsBanner(context),
-
-            const SizedBox(height: 24),
-
-            // Top Locations in Fiji
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(
-                    title: 'Browse Top Locations',
-                    subtitle: 'Prime residential and investment hubs across Fiji',
-                  ),
-                  const SizedBox(height: 14),
-                  _buildLocationList(context),
-                ],
+              // Featured Properties Carousel
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: _buildSectionHeader(
+                        title: 'Featured Fiji Listings',
+                        subtitle: 'Hand-picked premium island homes & estates',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => _navigateToSearchWithFilter(),
+                      child: const Text('View All', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 12),
+              _buildFeaturedCarousel(context),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // Direct Agent Assistance Banner
-            _buildSupportBanner(context),
+              // Quick Financial & Investment Tools Banner
+              _buildQuickToolsBanner(context),
 
-            const SizedBox(height: 32),
-          ],
+              const SizedBox(height: 24),
+
+              // Top Locations in Fiji
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(
+                      title: 'Browse Top Locations',
+                      subtitle: 'Prime residential and investment hubs across Fiji',
+                    ),
+                    const SizedBox(height: 14),
+                    _buildLocationList(context),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Fiji Land Tenure & Buyer Guide Banner
+              _buildBuyerGuideCard(context),
+
+              const SizedBox(height: 24),
+
+              // Recent Fiji Listings Feed
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(
+                      title: 'Latest Opportunities',
+                      subtitle: 'Newly listed residential & commercial properties',
+                    ),
+                    const SizedBox(height: 14),
+                    _buildRecentPropertiesList(context),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );
@@ -202,7 +288,7 @@ class ExploreTab extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],
+                  ],nti
                 ),
               ),
             ],
@@ -219,7 +305,7 @@ class ExploreTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Explore houses for sale, luxury rentals, commercial spaces, and verified real estate agents.',
+            'Explore houses for sale, luxury rentals, commercial spaces, and verified real estate agents in Fiji.',
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
               fontSize: 13.5,
@@ -227,9 +313,15 @@ class ExploreTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          // Instant Search Button
+          // Instant Search Bar Trigger
           InkWell(
-            onTap: () => onNavigateTab?.call(1),
+            onTap: () {
+              if (widget.onNavigateTab != null) {
+                widget.onNavigateTab!(1);
+              } else {
+                _navigateToSearchWithFilter();
+              }
+            },
             borderRadius: BorderRadius.circular(14),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -250,7 +342,7 @@ class ExploreTab extends StatelessWidget {
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
-                      'Search Suva, Nadi, Denarau...',
+                      'Search Suva, Nadi, Denarau Island...',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 14,
@@ -310,44 +402,49 @@ class ExploreTab extends StatelessWidget {
     final categories = [
       {
         'title': 'Properties For Sale',
-        'subtitle': 'Houses, apartments & land',
+        'subtitle': 'Houses, villas & freehold',
         'icon': Icons.home_rounded,
-        'url': 'https://shiftfiji.com/properties?type=sale',
+        'action': () => _navigateToSearchWithFilter(transactionType: 'Buy'),
         'color': const Color(0xFF1E3A8A),
       },
       {
         'title': 'Properties For Rent',
         'subtitle': 'Short & long-term rentals',
         'icon': Icons.key_rounded,
-        'url': 'https://shiftfiji.com/properties?type=rent',
+        'action': () => _navigateToSearchWithFilter(transactionType: 'Rent'),
         'color': const Color(0xFF0F766E),
       },
       {
-        'title': 'Agencies & Brokers',
-        'subtitle': 'Trusted Fiji real estate firms',
-        'icon': Icons.business_rounded,
-        'url': 'https://shiftfiji.com/agencies',
+        'title': 'Freehold Land',
+        'subtitle': 'Pure freehold ownership',
+        'icon': Icons.landscape_rounded,
+        'action': () => _navigateToSearchWithFilter(tenure: 'Freehold'),
         'color': const Color(0xFF6B21A8),
       },
       {
-        'title': 'Find an Agent',
-        'subtitle': 'Licensed local realtors',
-        'icon': Icons.badge_rounded,
-        'url': 'https://shiftfiji.com/agents',
+        'title': 'Commercial & Industrial',
+        'subtitle': 'Warehouses, offices & shops',
+        'icon': Icons.business_rounded,
+        'action': () => _navigateToSearchWithFilter(transactionType: 'Commercial'),
         'color': const Color(0xFFC2410C),
       },
       {
-        'title': 'Property Services',
-        'subtitle': 'Valuation, legal & moving',
-        'icon': Icons.home_repair_service_rounded,
-        'url': 'https://shiftfiji.com/services',
+        'title': 'Luxury Island Villas',
+        'subtitle': 'Denarau & beachfront estates',
+        'icon': Icons.villa_rounded,
+        'action': () => _navigateToSearchWithFilter(propertyType: 'Villa'),
         'color': const Color(0xFF0369A1),
       },
       {
-        'title': 'Market Insights & Blog',
-        'subtitle': 'Fiji real estate news & tips',
-        'icon': Icons.article_rounded,
-        'url': 'https://shiftfiji.com/blogs',
+        'title': 'Fiji Buyer Guide',
+        'subtitle': 'Land laws & tenure handbook',
+        'icon': Icons.menu_book_rounded,
+        'action': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const BuyersGuideScreen()),
+          );
+        },
         'color': const Color(0xFF475569),
       },
     ];
@@ -359,20 +456,16 @@ class ExploreTab extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.25,
+        childAspectRatio: 1.10,
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final cat = categories[index];
         return InkWell(
-          onTap: () => _openPortal(
-            context,
-            cat['url'] as String,
-            cat['title'] as String,
-          ),
+          onTap: cat['action'] as VoidCallback,
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -390,7 +483,7 @@ class ExploreTab extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
                     color: (cat['color'] as Color).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -398,18 +491,19 @@ class ExploreTab extends StatelessWidget {
                   child: Icon(
                     cat['icon'] as IconData,
                     color: cat['color'] as Color,
-                    size: 22,
+                    size: 20,
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       cat['title'] as String,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
@@ -420,7 +514,7 @@ class ExploreTab extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -431,6 +525,188 @@ class ExploreTab extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFeaturedCarousel(BuildContext context) {
+    return SizedBox(
+      height: 310,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: _featuredList.length,
+        separatorBuilder: (context, idx) => const SizedBox(width: 14),
+        itemBuilder: (context, idx) {
+          final p = _featuredList[idx];
+          return _buildFeaturedCard(context, p);
+        },
+      ),
+    );
+  }
+
+  Widget _buildFeaturedCard(BuildContext context, Property p) {
+    final isSaved = StorageService.isPropertySaved(p.id);
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PropertyDetailScreen(property: p)),
+        ).then((_) => setState(() {}));
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: 270,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Stack
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  child: Image.network(
+                    p.mainImage,
+                    height: 155,
+                    width: 270,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 155,
+                      width: 270,
+                      color: AppColors.primaryLight,
+                      child: const Icon(Icons.home_rounded, color: Colors.white, size: 40),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: p.tenure.toLowerCase().contains('freehold') ? AppColors.success : AppColors.gold,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      p.tenure,
+                      style: TextStyle(
+                        color: p.tenure.toLowerCase().contains('freehold') ? Colors.white : AppColors.primary,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        isSaved ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
+                        color: isSaved ? AppColors.error : Colors.white,
+                        size: 18,
+                      ),
+                      onPressed: () async {
+                        await StorageService.togglePropertySaved(p);
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.priceDisplay,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    p.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_rounded, size: 13, color: AppColors.goldDark),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(
+                          p.location,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Specs line
+                  Row(
+                    children: [
+                      if (p.bedrooms > 0) ...[
+                        const Icon(Icons.bed_rounded, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 3),
+                        Text('${p.bedrooms}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 10),
+                      ],
+                      if (p.bathrooms > 0) ...[
+                        const Icon(Icons.bathtub_rounded, size: 14, color: AppColors.primary),
+                        const SizedBox(width: 3),
+                        Text('${p.bathrooms}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 10),
+                      ],
+                      const Icon(Icons.square_foot_rounded, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(
+                          p.landArea,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -453,79 +729,49 @@ class ExploreTab extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.gold.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.calculate_rounded, color: AppColors.gold, size: 22),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Fiji Mortgage & Currency Tools',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      'Estimate monthly loan repayments & FJD rates',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.calculate_rounded,
+              color: AppColors.gold,
+              size: 32,
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => onNavigateTab?.call(2),
-                  icon: const Icon(Icons.pie_chart_rounded, size: 16),
-                  label: const Text('Mortgage Calc'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white30),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Fiji Mortgage & Currency Suite',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => onNavigateTab?.call(2),
-                  icon: const Icon(Icons.currency_exchange_rounded, size: 16),
-                  label: const Text('FJD Converter'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                const SizedBox(height: 3),
+                Text(
+                  'Calculate monthly loan repayments, FJD exchange rates & stamp duty.',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 12,
+                    height: 1.3,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+            onPressed: () => widget.onNavigateTab?.call(2),
           ),
         ],
       ),
@@ -534,177 +780,228 @@ class ExploreTab extends StatelessWidget {
 
   Widget _buildLocationList(BuildContext context) {
     final locations = [
-      {'name': 'Suva', 'region': 'Capital & Business Hub', 'tag': 'High Demand'},
-      {'name': 'Nadi', 'region': 'Tourism & International Airport', 'tag': 'Popular'},
-      {'name': 'Denarau Island', 'region': 'Luxury Marina & Beach Villas', 'tag': 'Exclusive'},
-      {'name': 'Lautoka', 'region': 'Second Largest City & Port', 'tag': 'Commercial'},
-      {'name': 'Coral Coast', 'region': 'Beachfront Resorts & Retreats', 'tag': 'Scenic'},
-      {'name': 'Pacific Harbour', 'region': 'Arts Village & Coastal Homes', 'tag': 'Lifestyle'},
+      {'name': 'Denarau Island', 'sub': 'Luxury Marina & Gated Villas', 'img': 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80'},
+      {'name': 'Suva', 'sub': 'Capital City Executive & Penthouses', 'img': 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80'},
+      {'name': 'Nadi & Fantasy Island', 'sub': 'Waterfront canal homes & resorts', 'img': 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=400&q=80'},
+      {'name': 'Coral Coast & Pacific Harbour', 'sub': 'Freehold coastal lots & golf villas', 'img': 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=400&q=80'},
+      {'name': 'Savusavu', 'sub': 'Eco-resort land & private bays', 'img': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=400&q=80'},
     ];
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: locations.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final loc = locations[index];
-        return InkWell(
-          onTap: () {
-            final queryUrl = 'https://shiftfiji.com/properties?location=${Uri.encodeComponent(loc['name']!)}';
-            _openPortal(context, queryUrl, '${loc['name']} Properties');
-          },
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
+    return Column(
+      children: locations.map((loc) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                loc['img']!,
+                width: 54,
+                height: 54,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 54,
+                  height: 54,
+                  color: AppColors.primaryLight,
+                  child: const Icon(Icons.location_city_rounded, color: Colors.white, size: 24),
+                ),
+              ),
             ),
+            title: Text(
+              loc['name']!,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.textPrimary),
+            ),
+            subtitle: Text(
+              loc['sub']!,
+              style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textSecondary),
+            onTap: () => _navigateToSearchWithFilter(city: loc['name']!.split(' ')[0]),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildBuyerGuideCard(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.gold.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.gavel_rounded, color: AppColors.primary, size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Fiji Property Buyer Guide',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.primary),
+                ),
+                const SizedBox(height: 3),
+                const Text(
+                  'Learn about Freehold vs Crown Lease, Non-Resident rules & Stamp Duty.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textPrimary, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BuyersGuideScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Read', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentPropertiesList(BuildContext context) {
+    return Column(
+      children: _allProperties.take(4).map((p) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PropertyDetailScreen(property: p)),
+              ).then((_) => setState(() {}));
+            },
+            borderRadius: BorderRadius.circular(16),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.location_city_rounded,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        loc['name']!,
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        loc['region']!,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    loc['tag']!,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                ClipRRect(
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                  child: Image.network(
+                    p.mainImage,
+                    width: 110,
+                    height: 110,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 110,
+                      height: 110,
+                      color: AppColors.primaryLight,
+                      child: const Icon(Icons.home_work_rounded, color: Colors.white, size: 36),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: AppColors.textLight,
-                  size: 14,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                p.priceDisplay,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppColors.primary),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: p.tenure.toLowerCase().contains('freehold') ? AppColors.success.withOpacity(0.15) : AppColors.gold.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                p.tenure,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: p.tenure.toLowerCase().contains('freehold') ? AppColors.success : AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          p.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          p.location,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            if (p.bedrooms > 0) ...[
+                              const Icon(Icons.bed_rounded, size: 13, color: AppColors.primary),
+                              const SizedBox(width: 2),
+                              Text('${p.bedrooms}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              const SizedBox(width: 8),
+                            ],
+                            const Icon(Icons.square_foot_rounded, size: 13, color: AppColors.primary),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                p.landArea,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
         );
-      },
-    );
-  }
-
-  Widget _buildSupportBanner(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.teal,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.headset_mic_rounded, color: Colors.white, size: 24),
-              SizedBox(width: 10),
-              Text(
-                'Need Expert Assistance in Fiji?',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Looking to buy, sell, or rent property in Fiji? Speak directly with our dedicated team of property specialists.',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _launchContact('mailto:info@shiftfiji.com'),
-                  icon: const Icon(Icons.email_rounded, size: 16),
-                  label: const Text('Email Us'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.teal,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _openPortal(
-                    context,
-                    'https://shiftfiji.com/contact-us',
-                    'Contact Shift Fiji',
-                  ),
-                  icon: const Icon(Icons.support_agent_rounded, size: 16),
-                  label: const Text('Help Center'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+      }).toList(),
     );
   }
 }

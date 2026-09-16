@@ -1,11 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shiftfiji/models/property.dart';
 import 'package:shiftfiji/models/saved_property.dart';
+import 'package:shiftfiji/services/property_service.dart';
 
 class StorageService {
-  static const String _savedPropertiesKey = 'sf_saved_properties_v1';
-  static const String _recentSearchesKey = 'sf_recent_searches_v1';
-  static const String _preferredCurrencyKey = 'sf_preferred_currency_v1';
+  static const String _savedPropertiesKey = 'sf_saved_properties_v2';
+  static const String _recentSearchesKey = 'sf_recent_searches_v2';
+  static const String _preferredCurrencyKey = 'sf_preferred_currency_v2';
+  static const String _comparePropertiesKey = 'sf_compare_properties_v2';
+  static const String _recentlyViewedKey = 'sf_recently_viewed_v2';
 
   static SharedPreferences? _prefs;
 
@@ -53,6 +57,21 @@ class StorageService {
     }
   }
 
+  static Future<bool> savePropertyFromModel(Property property, {String notes = ''}) async {
+    final saved = SavedProperty(
+      id: property.id,
+      title: property.title,
+      price: property.priceDisplay,
+      location: property.location,
+      type: property.transactionType,
+      imageUrl: property.mainImage,
+      url: 'https://shiftfiji.com/properties/${property.id}',
+      notes: notes,
+      savedAt: DateTime.now(),
+    );
+    return await saveProperty(saved);
+  }
+
   static Future<bool> removeProperty(String id) async {
     try {
       final list = getSavedProperties();
@@ -70,6 +89,14 @@ class StorageService {
     return list.any((p) => p.id == id || (url != null && url.isNotEmpty && p.url == url));
   }
 
+  static Future<bool> togglePropertySaved(Property property) async {
+    if (isPropertySaved(property.id)) {
+      return await removeProperty(property.id);
+    } else {
+      return await savePropertyFromModel(property);
+    }
+  }
+
   static Future<bool> updatePropertyNotes(String id, String notes) async {
     final list = getSavedProperties();
     final index = list.indexWhere((p) => p.id == id);
@@ -81,13 +108,58 @@ class StorageService {
     return false;
   }
 
+  // --- Property Comparison Matrix (Up to 3 properties) ---
+  static List<String> getComparisonIds() {
+    return prefs.getStringList(_comparePropertiesKey) ?? [];
+  }
+
+  static List<Property> getComparisonProperties() {
+    final ids = getComparisonIds();
+    return ids.map((id) => PropertyService.getById(id)).whereType<Property>().toList();
+  }
+
+  static Future<bool> toggleComparison(String propertyId) async {
+    final list = getComparisonIds();
+    if (list.contains(propertyId)) {
+      list.remove(propertyId);
+    } else {
+      if (list.length >= 3) {
+        list.removeAt(0); // keep max 3
+      }
+      list.add(propertyId);
+    }
+    return await prefs.setStringList(_comparePropertiesKey, list);
+  }
+
+  static bool isInComparison(String propertyId) {
+    return getComparisonIds().contains(propertyId);
+  }
+
+  static Future<bool> clearComparison() async {
+    return await prefs.remove(_comparePropertiesKey);
+  }
+
+  // --- Recently Viewed ---
+  static List<Property> getRecentlyViewed() {
+    final ids = prefs.getStringList(_recentlyViewedKey) ?? [];
+    return ids.map((id) => PropertyService.getById(id)).whereType<Property>().toList();
+  }
+
+  static Future<void> trackRecentlyViewed(String propertyId) async {
+    final list = prefs.getStringList(_recentlyViewedKey) ?? [];
+    list.remove(propertyId);
+    list.insert(0, propertyId);
+    if (list.length > 10) list.removeLast();
+    await prefs.setStringList(_recentlyViewedKey, list);
+  }
+
   // --- Recent Searches ---
   static List<String> getRecentSearches() {
     return prefs.getStringList(_recentSearchesKey) ?? [
-      'Suva Waterfront Apartments',
       'Denarau Island Luxury Villas',
-      'Nadi Airport Commercial Space',
+      'Suva Domain Ocean View',
       'Coral Coast Freehold Land',
+      'Fantasy Island Nadi Canal Home',
     ];
   }
 
@@ -100,6 +172,10 @@ class StorageService {
     await prefs.setStringList(_recentSearchesKey, list);
   }
 
+  static Future<void> clearRecentSearches() async {
+    await prefs.remove(_recentSearchesKey);
+  }
+
   // --- Preferred Currency ---
   static String getPreferredCurrency() {
     return prefs.getString(_preferredCurrencyKey) ?? 'FJD';
@@ -109,7 +185,7 @@ class StorageService {
     await prefs.setString(_preferredCurrencyKey, currency);
   }
 
-  // --- Initial Curated Properties for Fiji Offline Showcase ---
+  // --- Initial Curated Properties Pre-population ---
   static Future<void> _prepopulateCuratedProperties() async {
     final initial = [
       SavedProperty(
@@ -119,31 +195,20 @@ class StorageService {
         location: 'Denarau Island, Nadi, Fiji',
         type: 'Buy',
         imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
-        url: 'https://shiftfiji.com/properties',
-        notes: 'Exclusive gated community with private marina berth.',
+        url: 'https://shiftfiji.com/properties/prop-denarau-01',
+        notes: 'Exclusive gated marina villa with private berth.',
         savedAt: DateTime.now().subtract(const Duration(days: 1)),
       ),
       SavedProperty(
-        id: 'prop-suva-02',
-        title: 'Modern Executive Penthouse with Ocean Views',
-        price: 'FJD \$4,500 / month',
-        location: 'Domain, Suva, Fiji',
-        type: 'Rent',
-        imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80',
-        url: 'https://shiftfiji.com/properties',
-        notes: 'Fully furnished, 24/7 security and swimming pool.',
-        savedAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-      SavedProperty(
         id: 'prop-coral-03',
-        title: 'Freehold Coastal Development Land',
+        title: 'Freehold Coastal Development Land - 2.5 Acres',
         price: 'FJD \$890,000',
-        location: 'Coral Coast, Sigatoka, Fiji',
+        location: 'Korotogo, Coral Coast, Sigatoka, Fiji',
         type: 'Buy',
         imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
-        url: 'https://shiftfiji.com/properties',
-        notes: 'Ideal for boutique eco-resort or private retreat.',
-        savedAt: DateTime.now().subtract(const Duration(days: 5)),
+        url: 'https://shiftfiji.com/properties/prop-coral-03',
+        notes: '100% Freehold title with elevated 180-degree ocean views.',
+        savedAt: DateTime.now().subtract(const Duration(days: 3)),
       ),
     ];
 

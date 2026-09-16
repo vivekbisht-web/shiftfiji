@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shiftfiji/constants/app_colors.dart';
+import 'package:shiftfiji/screens/buyers_guide_screen.dart';
+import 'package:shiftfiji/screens/property_compare_screen.dart';
 import 'package:shiftfiji/screens/web_view.dart';
+import 'package:shiftfiji/services/storage_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsTab extends StatefulWidget {
@@ -11,6 +14,14 @@ class SettingsTab extends StatefulWidget {
 }
 
 class _SettingsTabState extends State<SettingsTab> {
+  String _selectedCurrency = 'FJD';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCurrency = StorageService.getPreferredCurrency();
+  }
+
   void _openUrl(String url, String title) {
     Navigator.push(
       context,
@@ -31,27 +42,31 @@ class _SettingsTabState extends State<SettingsTab> {
   }
 
   void _clearCache() {
+    final messenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Clear App Cache'),
         content: const Text(
-          'This will clear temporary web data and cached images. Your saved offline properties will not be affected.',
+          'This will clear temporary web data and search history. Your saved offline properties will not be affected.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cache and temporary web files cleared successfully.'),
-                  backgroundColor: AppColors.primary,
-                ),
-              );
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await StorageService.clearRecentSearches();
+              if (mounted) {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Cache and temporary search history cleared successfully.'),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -72,7 +87,7 @@ class _SettingsTabState extends State<SettingsTab> {
         backgroundColor: AppColors.primary,
         elevation: 0,
         title: const Text(
-          'Settings & Privacy',
+          'Settings & Preferences',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -91,61 +106,95 @@ class _SettingsTabState extends State<SettingsTab> {
 
             const SizedBox(height: 20),
 
-            // Quick Portal Links
-            _buildSectionTitle('Explore Shift Fiji Portal'),
+            // Regional & Financial Preferences
+            _buildSectionTitle('Preferences & Tools'),
             const SizedBox(height: 8),
-            _buildSettingsTile(
-              icon: Icons.business_rounded,
-              title: 'Agencies Directory',
-              subtitle: 'Browse real estate companies in Fiji',
-              onTap: () => _openUrl('https://shiftfiji.com/agencies', 'Agencies'),
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.currency_exchange_rounded, color: AppColors.primary, size: 20),
+                ),
+                title: const Text('Default Currency Display', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                subtitle: Text('Current: $_selectedCurrency', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                trailing: DropdownButton<String>(
+                  value: _selectedCurrency,
+                  underline: const SizedBox(),
+                  items: ['FJD', 'AUD', 'USD', 'NZD', 'EUR', 'GBP'].map((c) {
+                    return DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)));
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _selectedCurrency = val;
+                      });
+                      StorageService.setPreferredCurrency(val);
+                    }
+                  },
+                ),
+              ),
             ),
             _buildSettingsTile(
-              icon: Icons.badge_rounded,
-              title: 'Registered Agents',
-              subtitle: 'Find licensed property specialists',
-              onTap: () => _openUrl('https://shiftfiji.com/agents', 'Agents'),
+              icon: Icons.compare_arrows_rounded,
+              title: 'Property Comparison Matrix',
+              subtitle: 'Compare up to 3 selected Fiji properties',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PropertyCompareScreen()),
+                );
+              },
             ),
             _buildSettingsTile(
-              icon: Icons.home_repair_service_rounded,
-              title: 'Property Services',
-              subtitle: 'Valuation, building inspection, legal',
-              onTap: () => _openUrl('https://shiftfiji.com/services', 'Services'),
-            ),
-            _buildSettingsTile(
-              icon: Icons.newspaper_rounded,
-              title: 'Market Insights & Blogs',
-              subtitle: 'Fiji property market trends & news',
-              onTap: () => _openUrl('https://shiftfiji.com/blogs', 'Blogs'),
+              icon: Icons.gavel_rounded,
+              title: 'Fiji Land & Buyer Handbook',
+              subtitle: 'Freehold vs Leasehold, Foreign Investor Laws',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const BuyersGuideScreen()),
+                );
+              },
             ),
 
             const SizedBox(height: 20),
 
             // Support & Contact
-            _buildSectionTitle('Help & Legal'),
+            _buildSectionTitle('Support & Legal'),
             const SizedBox(height: 8),
             _buildSettingsTile(
               icon: Icons.support_agent_rounded,
-              title: 'Contact Support',
+              title: 'Contact Shift Fiji Team',
               subtitle: 'info@shiftfiji.com',
-              onTap: () => _launchExternal('mailto:info@shiftfiji.com'),
+              onTap: () => _launchExternal('mailto:info@shiftfiji.com?subject=Shift%20Fiji%20App%20Inquiry'),
             ),
             _buildSettingsTile(
               icon: Icons.privacy_tip_outlined,
               title: 'Privacy Policy',
-              subtitle: 'Read our data protection guidelines',
+              subtitle: 'Read our strict data protection commitments',
               onTap: () => _openUrl('https://shiftfiji.com/contact-us', 'Privacy Policy'),
             ),
             _buildSettingsTile(
               icon: Icons.description_outlined,
               title: 'Terms of Service',
-              subtitle: 'User agreement and listing guidelines',
+              subtitle: 'User terms and property listing rules',
               onTap: () => _openUrl('https://shiftfiji.com/contact-us', 'Terms of Service'),
             ),
             _buildSettingsTile(
               icon: Icons.cleaning_services_rounded,
-              title: 'Clear Temporary Cache',
-              subtitle: 'Free up local web storage space',
+              title: 'Clear Search History & Cache',
+              subtitle: 'Free up local cached device storage',
               onTap: _clearCache,
             ),
 
@@ -162,7 +211,7 @@ class _SettingsTabState extends State<SettingsTab> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
-                      'Shift Fiji • Version 1.0.0 (Build 2)',
+                      'Shift Fiji • Version 1.0.0 (Build 4)',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
