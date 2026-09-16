@@ -211,7 +211,7 @@ class _SettingsTabState extends State<SettingsTab> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
-                      'Shift Fiji • Version 1.0.0 (Build 4)',
+                      'Shift Fiji • Version 1.0.0 (Build 5)',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
