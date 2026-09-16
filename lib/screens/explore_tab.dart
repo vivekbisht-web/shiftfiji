@@ -288,7 +288,7 @@ class _ExploreTabState extends State<ExploreTab> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ],nti
+                  ],
                 ),
               ),
             ],
